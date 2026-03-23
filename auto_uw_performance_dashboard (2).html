@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto UW Performance Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 18px 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: white;
+        }
+        
+        .tab-btn:hover {
+            background: white;
+            color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 30px;
+            animation: fadeIn 0.3s;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        
+        .section-header h2 {
+            color: #212529;
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        .section-note {
+            background: #f0f4ff;
+            border-left: 3px solid #667eea;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+        
+        .metric-label {
+            font-size: 13px;
+            font-weight: 600;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 8px;
+        }
+        
+        .metric-subtext {
+            font-size: 12px;
+            margin-top: 8px;
+            opacity: 0.7;
+        }
+        
+        .chart-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .chart-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #212529;
+            margin-bottom: 20px;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .outcomes-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .top-performers {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .performer-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .performer-card.fastest {
+            border-left: 4px solid #667eea;
+        }
+        
+        .performer-card.slowest {
+            border-left: 4px solid #764ba2;
+        }
+        
+        .performer-header {
+            padding: 15px;
+            background: #f8f9fa;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        
+        .performer-header.fastest {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .performer-header.slowest {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            color: white;
+        }
+        
+        .performer-row {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+        
+        .performer-row:hover {
+            background: #f8f9fa;
+        }
+        
+        .performer-row:last-child {
+            border-bottom: none;
+        }
+        
+        .performer-key {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #6c757d;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .performer-duration {
+            font-weight: 700;
+            color: #212529;
+            margin-left: 15px;
+            white-space: nowrap;
+        }
+        
+        .performer-duration.fastest {
+            color: #667eea;
+        }
+        
+        .performer-duration.slowest {
+            color: #764ba2;
+        }
+        
+        .chart-container-tall {
+            position: relative;
+            height: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .insights {
+            background: #f8f9fa;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        
+        .insights h4 {
+            color: #212529;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        
+        .insights ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .insights li {
+            color: #6c757d;
+            font-size: 14px;
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .insights li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+        }
+        
+        .drill-down-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+        }
+        
+        .drill-down-table thead {
+            background: #f8f9fa;
+        }
+        
+        .drill-down-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 700;
+            color: #212529;
+            border-bottom: 2px solid #e9ecef;
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+        
+        .drill-down-table td {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 14px;
+        }
+        
+        .drill-down-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .workspace-link {
+            display: inline-block;
+            color: #667eea;
+            text-decoration: none;
+            font-size: 18px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .workspace-link:hover {
+            transform: scale(1.2);
+        }
+        
+        .sort-header {
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .sort-header:after {
+            content: " ↕";
+            color: #999;
+        }
+        
+        .sort-header.asc:after {
+            content: " ↑";
+            color: #667eea;
+        }
+        
+        .sort-header.desc:after {
+            content: " ↓";
+            color: #667eea;
+        }
+        
+        .note {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #1565c0;
+        }
+
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .top-performers {
+                grid-template-columns: 1fr;
+            }
+            
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .section-note {
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Auto UW Performance Dashboard</h1>
+            <p>Real-time analytics for conditional approval processing and decision outcomes</p>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="overview">📊 Overview</button>
+            <button class="tab-btn" data-tab="drill-down">📋 Drill Down</button>
+        </div>
+        
+        <!-- OVERVIEW TAB -->
+        <div id="overview" class="tab-content active">
+            <div class="section-header">
+                <h2 style="margin-bottom: 0;">Performance Analytics</h2>
+                <div class="section-note">Last 7 days • Conditional Approvals</div>
+            </div>
+            
+            <!-- Conditional Approval Metrics -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Total Approvals</div>
+                    <div class="metric-value" id="totalApprovals">-</div>
+                    <div class="metric-subtext" id="approvalDateRange">-</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">P90 Duration</div>
+                    <div class="metric-value" id="p90Value">-</div>
+                    <div class="metric-subtext">90th percentile</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Median Duration</div>
+                    <div class="metric-value" id="medianValue">-</div>
+                    <div class="metric-subtext">50th percentile</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Average Duration</div>
+                    <div class="metric-value" id="averageValue">-</div>
+                    <div class="metric-subtext">mean time</div>
+                </div>
+            </div>
+            
+            <!-- Charts -->
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <canvas id="p90Chart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="approvalsChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Top Performers -->
+            <h3 style="margin: 30px 0 20px; color: #212529;">Processing Efficiency</h3>
+            <div class="top-performers" id="topPerformersContainer">
+            </div>
+            
+            <div class="insights">
+                <h4>📈 Performance Insights</h4>
+                <ul id="performanceInsights">
+                </ul>
+            </div>
+            
+            <!-- Decision Outcomes Section -->
+            <div class="section-header" style="margin-top: 40px;">
+                <h2 style="margin-bottom: 0;">Decision Outcomes Analysis</h2>
+                <div class="section-note">Last 30 days • All Decisions</div>
+            </div>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Total Decisions</div>
+                    <div class="metric-value" id="totalDecisions">-</div>
+                    <div class="metric-subtext">processed decisions</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Attempted Underwrite</div>
+                    <div class="metric-value" id="attemptedUW">-</div>
+                    <div class="metric-subtext" id="attemptedUWRate">-</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Not Eligible</div>
+                    <div class="metric-value" id="notEligible">-</div>
+                    <div class="metric-subtext">excluded from UW</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Success Rate</div>
+                    <div class="metric-value" id="successRate">-</div>
+                    <div class="metric-subtext" id="successGoal">-</div>
+                </div>
+            </div>
+            
+            <!-- Decision Distribution (full width) -->
+            <div class="outcomes-grid">
+                <div class="chart-section">
+                    <h3 class="chart-title">Decision Outcome Distribution</h3>
+                    <div class="chart-container-tall">
+                        <canvas id="outcomeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="insights">
+                <h4>📊 Decision Outcomes Insights</h4>
+                <ul id="decisionInsights">
+                </ul>
+            </div>
+            
+            <div class="note">
+                ℹ️ <strong>Dashboard Information:</strong> This dashboard contains embedded data and works completely offline. All charts and tables update dynamically. Data is current as of <span id="generatedDate"></span>.
+            </div>
+        </div>
+        
+        <!-- DRILL DOWN TAB -->
+        <div id="drill-down" class="tab-content">
+            <h2 style="margin-bottom: 20px; color: #212529;">Conditional Approval Records</h2>
+            <p style="color: #6c757d; margin-bottom: 20px;">Click column headers to sort. Use the workspace link (🔗) to view details in Veterans United workspace.</p>
+            
+            <div style="overflow-x: auto;">
+                <table class="drill-down-table">
+                    <thead>
+                        <tr>
+                            <th class="sort-header" data-sort="BUSINESS_KEY_">Business Key</th>
+                            <th class="sort-header" data-sort="START_TIME_">Start Time</th>
+                            <th class="sort-header" data-sort="END_TIME_">End Time</th>
+                            <th class="sort-header" data-sort="DURATION_MIN">Duration (min)</th>
+                            <th>Workspace</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="note">
+                🔗 <strong>Workspace Links:</strong> Only work for Veterans United employees. Links open in new tabs and navigate to the underwriting workspace for each business key.
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const dashboardData = {"ca_records": [{"BUSINESS_KEY_": "0eb8c156-b54b-454d-8809-bef2fb6ba853", "START_TIME_": "2026-03-22 17:14:40", "END_TIME_": "2026-03-22 17:18:19", "DURATION_MIN": 3.6460833333333333}, {"BUSINESS_KEY_": "d907f7a9-31ff-4108-8e04-3ede65b18d3d", "START_TIME_": "2026-03-22 16:57:18", "END_TIME_": "2026-03-22 17:02:28", "DURATION_MIN": 5.166933333333334}, {"BUSINESS_KEY_": "aeb1bb0f-e79a-43bb-bbef-9d9901293c7b", "START_TIME_": "2026-03-22 16:06:00", "END_TIME_": "2026-03-22 16:13:31", "DURATION_MIN": 7.521866666666667}, {"BUSINESS_KEY_": "ef198dcc-e5e1-4342-bfe3-a5d943cf8ecf", "START_TIME_": "2026-03-21 10:50:18", "END_TIME_": "2026-03-21 10:55:29", "DURATION_MIN": 5.18305}], "ca_metrics": {"total": 462, "p90": 12.91, "p75": 8.16, "median": 5.16, "average": 6.65, "fastest": 1.63, "slowest": 39.1, "date_range": "2026-03-16 to 2026-03-22"}, "daily_stats": [{"DATE": "2026-03-16", "COUNT": 97, "P90": 14.11, "P75": 8.08}, {"DATE": "2026-03-17", "COUNT": 132, "P90": 11.21, "P75": 8.37}, {"DATE": "2026-03-18", "COUNT": 81, "P90": 14.03, "P75": 9.67}, {"DATE": "2026-03-19", "COUNT": 79, "P90": 8.39, "P75": 6.55}, {"DATE": "2026-03-20", "COUNT": 69, "P90": 10.01, "P75": 7.7}, {"DATE": "2026-03-21", "COUNT": 1, "P90": 5.18, "P75": 5.18}, {"DATE": "2026-03-22", "COUNT": 3, "P90": 7.05, "P75": 6.34}], "top3_fastest": [{"BUSINESS_KEY_": "278e53b8-0de3-472b-a4e9-34c735733c99", "DURATION_MIN": 1.6265166666666666, "START_TIME_": "2026-03-19 18:14:21"}, {"BUSINESS_KEY_": "e418e5d3-b53c-4ab1-9206-98ba3ec745c9", "DURATION_MIN": 1.95305, "START_TIME_": "2026-03-19 17:51:04"}, {"BUSINESS_KEY_": "65bca2a5-fed3-4756-ae2f-d85a26acd726", "DURATION_MIN": 2.0335666666666667, "START_TIME_": "2026-03-19 17:47:45"}], "top3_slowest": [{"BUSINESS_KEY_": "16d85d2d-d3f8-41a9-9f7b-0fd914ce2baf", "DURATION_MIN": 39.10476666666667, "START_TIME_": "2026-03-18 11:49:54"}, {"BUSINESS_KEY_": "d9d14444-21d3-47e8-a892-e0b00e798ae0", "DURATION_MIN": 27.800683333333332, "START_TIME_": "2026-03-17 15:54:49"}, {"BUSINESS_KEY_": "ec3026a8-121a-49e7-9734-e00947f8579c", "DURATION_MIN": 26.06385, "START_TIME_": "2026-03-16 15:43:35"}], "do_metrics": {"total_decisions": 7296, "successful": 1519, "not_eligible": 1842, "attempted_underwrite": 5454, "attempted_underwrite_rate": 74.75, "success_rate": 20.82, "goal": 55}, "do_records": [{"DecisionCategory": "Inconclusive", "DecisionCount": 2274, "Category": "Off Ramp"}, {"DecisionCategory": "Not Eligible", "DecisionCount": 1842, "Category": "Not Eligible"}, {"DecisionCategory": "Ready to F&P", "DecisionCount": 1012, "Category": "Successful"}, {"DecisionCategory": "Mort Conditionally Approves", "DecisionCount": 507, "Category": "Successful"}, {"DecisionCategory": "Low Income Confidence - Wage Override", "DecisionCount": 466, "Category": "Off Ramp"}, {"DecisionCategory": "Manual Underwrite", "DecisionCount": 255, "Category": "Off Ramp"}, {"DecisionCategory": "AUS Failed", "DecisionCount": 189, "Category": "Off Ramp"}, {"DecisionCategory": "Low Income Confidence - SSI", "DecisionCount": 129, "Category": "Off Ramp"}, {"DecisionCategory": "Mort Was Unable To Save Available Conditions", "DecisionCount": 113, "Category": "Off Ramp"}, {"DecisionCategory": "Low Income Confidence", "DecisionCount": 101, "Category": "Off Ramp"}, {"DecisionCategory": "Mort Was Unable To Save Loan Updates", "DecisionCount": 94, "Category": "Off Ramp"}, {"DecisionCategory": "Incomplete Assessments", "DecisionCount": 87, "Category": "Off Ramp"}, {"DecisionCategory": "Low Income Confidence - SSI Override", "DecisionCount": 65, "Category": "Off Ramp"}, {"DecisionCategory": "Low Income Confidence - Va-Disability", "DecisionCount": 50, "Category": "Off Ramp"}, {"DecisionCategory": "Timeout", "DecisionCount": 45, "Category": "Off Ramp"}, {"DecisionCategory": "Low Income Confidence - Va-Disability Override", "DecisionCount": 30, "Category": "Off Ramp"}, {"DecisionCategory": "Low Income Confidence - Wage", "DecisionCount": 29, "Category": "Off Ramp"}, {"DecisionCategory": "Unable to Finish and Publish", "DecisionCount": 8, "Category": "Off Ramp"}]};
+        
+        // Initialize dashboard
+        function initDashboard() {
+            // Set metrics
+            document.getElementById('totalApprovals').textContent = dashboardData.ca_metrics.total.toLocaleString();
+            document.getElementById('approvalDateRange').textContent = dashboardData.ca_metrics.date_range;
+            document.getElementById('p90Value').textContent = dashboardData.ca_metrics.p90 + 'm';
+            document.getElementById('medianValue').textContent = dashboardData.ca_metrics.median + 'm';
+            document.getElementById('averageValue').textContent = dashboardData.ca_metrics.average + 'm';
+            
+            document.getElementById('totalDecisions').textContent = dashboardData.do_metrics.total_decisions.toLocaleString();
+            document.getElementById('attemptedUW').textContent = dashboardData.do_metrics.attempted_underwrite.toLocaleString();
+            document.getElementById('attemptedUWRate').textContent = dashboardData.do_metrics.attempted_underwrite_rate + '% of total';
+            document.getElementById('notEligible').textContent = dashboardData.do_metrics.not_eligible.toLocaleString();
+            document.getElementById('successRate').textContent = dashboardData.do_metrics.success_rate + '%';
+            document.getElementById('successGoal').textContent = 'vs ' + dashboardData.do_metrics.goal + '% goal';
+            
+            // Set generated date
+            document.getElementById('generatedDate').textContent = new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            // Build top performers
+            buildTopPerformers();
+            
+            // Build insights
+            buildInsights();
+            
+            // Initialize charts
+            initCharts();
+        }
+        
+        function buildTopPerformers() {
+            const container = document.getElementById('topPerformersContainer');
+            
+            // Fastest card
+            let fastestHtml = '<div class="performer-card fastest"><div class="performer-header fastest">⚡ Top 3 Fastest Approvals</div>';
+            dashboardData.top3_fastest.forEach(record => {
+                fastestHtml += `
+                    <div class="performer-row">
+                        <div class="performer-key" title="${record.BUSINESS_KEY_}">${record.BUSINESS_KEY_}</div>
+                        <div class="performer-duration fastest">${record.DURATION_MIN.toFixed(2)}m</div>
+                    </div>
+                `;
+            });
+            fastestHtml += '</div>';
+            
+            // Slowest card
+            let slowestHtml = '<div class="performer-card slowest"><div class="performer-header slowest">🐢 Top 3 Slowest Approvals</div>';
+            dashboardData.top3_slowest.forEach(record => {
+                slowestHtml += `
+                    <div class="performer-row">
+                        <div class="performer-key" title="${record.BUSINESS_KEY_}">${record.BUSINESS_KEY_}</div>
+                        <div class="performer-duration slowest">${record.DURATION_MIN.toFixed(2)}m</div>
+                    </div>
+                `;
+            });
+            slowestHtml += '</div>';
+            
+            container.innerHTML = fastestHtml + slowestHtml;
+        }
+        
+        function buildInsights() {
+            const perfInsights = document.getElementById('performanceInsights');
+            const decInsights = document.getElementById('decisionInsights');
+            
+            const perfHtml = `
+                <li>P90 performance: ${dashboardData.ca_metrics.p90} minutes (processing target)</li>
+                <li>Fastest approval: ${dashboardData.ca_metrics.fastest.toFixed(2)} minutes</li>
+                <li>Slowest approval: ${dashboardData.ca_metrics.slowest.toFixed(2)} minutes</li>
+                <li>Median is ${((dashboardData.ca_metrics.median / dashboardData.ca_metrics.p90) * 100).toFixed(0)}% of P90 (healthy distribution)</li>
+            `;
+            perfInsights.innerHTML = perfHtml;
+            
+            const decHtml = `
+                <li>Success Rate: ${dashboardData.do_metrics.success_rate}% of total decisions</li>
+                <li>Attempted Underwrite: ${dashboardData.do_metrics.attempted_underwrite_rate}% (${dashboardData.do_metrics.attempted_underwrite.toLocaleString()} of ${dashboardData.do_metrics.total_decisions.toLocaleString()})</li>
+                <li>Not Eligible: ${dashboardData.do_metrics.not_eligible.toLocaleString()} cases excluded from underwriting</li>
+                <li>Success Rate vs Goal: ${dashboardData.do_metrics.success_rate}% vs ${dashboardData.do_metrics.goal}% target</li>
+            `;
+            decInsights.innerHTML = decHtml;
+        }
+        
+        function initCharts() {
+            // P90 and P75 Trend Chart
+            const dailyStats = dashboardData.daily_stats;
+            const dates = dailyStats.map(d => d.DATE);
+            const p90Values = dailyStats.map(d => d.P90);
+            const p75Values = dailyStats.map(d => d.P75);
+            
+            const ctx1 = document.getElementById('p90Chart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        {
+                            label: 'P90 Duration (min)',
+                            data: p90Values,
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 6,
+                            pointBackgroundColor: '#667eea',
+                            pointBorderColor: 'white',
+                            pointBorderWidth: 2
+                        },
+                        {
+                            label: 'P75 Duration (min)',
+                            data: p75Values,
+                            borderColor: '#764ba2',
+                            backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 5,
+                            pointBackgroundColor: '#764ba2',
+                            pointBorderColor: 'white',
+                            pointBorderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { padding: 20, font: { size: 13, weight: 'bold' } }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 15,
+                            titleFont: { size: 14, weight: 'bold' },
+                            bodyFont: { size: 13 }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { font: { size: 12 } },
+                            title: { display: true, text: 'Duration (minutes)', font: { size: 12, weight: 'bold' } }
+                        },
+                        x: {
+                            ticks: { font: { size: 12 } }
+                        }
+                    }
+                }
+            });
+            
+            // Approvals per Day Chart
+            const approvalsPerDay = dailyStats.map(d => d.COUNT);
+            const ctx2 = document.getElementById('approvalsChart').getContext('2d');
+            const colors = ['rgba(102, 126, 234, 0.8)', 'rgba(118, 75, 162, 0.8)'];
+            const bgColors = approvalsPerDay.map((_, i) => colors[i % 2]);
+            
+            new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'Approvals per Day',
+                        data: approvalsPerDay,
+                        backgroundColor: bgColors,
+                        borderRadius: 6,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 15,
+                            titleFont: { size: 14, weight: 'bold' },
+                            bodyFont: { size: 13 }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { font: { size: 12 } },
+                            title: { display: true, text: 'Count', font: { size: 12, weight: 'bold' } }
+                        },
+                        x: {
+                            ticks: { font: { size: 12 } }
+                        }
+                    }
+                }
+            });
+            
+            // Outcome Distribution
+            const outcomeRecords = dashboardData.do_records;
+            const outcomeLabels = outcomeRecords.map(r => r.DecisionCategory);
+            const outcomeCounts = outcomeRecords.map(r => r.DecisionCount);
+            const outcomeCategories = outcomeRecords.map(r => r.Category);
+            
+            const colors_map = {
+                'Successful': 'rgba(102, 126, 234, 0.8)',
+                'Off Ramp': 'rgba(118, 75, 162, 0.8)',
+                'Not Eligible': 'rgba(102, 126, 234, 0.5)'
+            };
+            
+            const outcomeCtx = document.getElementById('outcomeChart').getContext('2d');
+            new Chart(outcomeCtx, {
+                type: 'bar',
+                data: {
+                    labels: outcomeLabels,
+                    datasets: [{
+                        label: 'Count',
+                        data: outcomeCounts,
+                        backgroundColor: outcomeCategories.map(cat => colors_map[cat] || 'rgba(102, 126, 234, 0.8)'),
+                        borderRadius: 6,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 15,
+                            titleFont: { size: 14, weight: 'bold' },
+                            bodyFont: { size: 13 },
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    const total = outcomeCounts.reduce((a, b) => a + b, 0);
+                                    const pct = (context.parsed.x / total * 100).toFixed(2);
+                                    return pct + '% of total';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { font: { size: 11 } },
+                            title: { display: true, text: 'Count', font: { size: 12, weight: 'bold' } }
+                        },
+                        y: {
+                            ticks: { font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Tab functionality
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabName = btn.dataset.tab;
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+                
+                if (tabName === 'drill-down') {
+                    renderDrillDownTable();
+                }
+            });
+        });
+        
+        // Drill-down table rendering
+        let sortState = {};
+        
+        function renderDrillDownTable() {
+            let recordData = dashboardData.ca_records;
+            const tbody = document.getElementById('tableBody');
+            
+            const sortedData = [...recordData].sort((a, b) => {
+                if (Object.keys(sortState).length === 0) return 0;
+                const [field, direction] = Object.entries(sortState)[0];
+                let aVal = a[field];
+                let bVal = b[field];
+                if (typeof aVal === 'string') {
+                    aVal = aVal.toLowerCase();
+                    bVal = bVal.toLowerCase();
+                }
+                if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+                if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+            
+            tbody.innerHTML = sortedData.map(record => `
+                <tr>
+                    <td>${record.BUSINESS_KEY_}</td>
+                    <td>${record.START_TIME_.slice(0, 19)}</td>
+                    <td>${record.END_TIME_.slice(0, 19)}</td>
+                    <td style="text-align: center; font-weight: 600;">${record.DURATION_MIN.toFixed(2)}</td>
+                    <td>
+                        <a href="https://workspaces.veteransunited.com/underwriting/${record.BUSINESS_KEY_}" 
+                           target="_blank" class="workspace-link" title="Open in workspace">🔗</a>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        // Sort header click handlers
+        document.querySelectorAll('.sort-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const field = header.dataset.sort;
+                const currentDirection = sortState[field];
+                sortState = {};
+                sortState[field] = currentDirection === 'asc' ? 'desc' : 'asc';
+                
+                document.querySelectorAll('.sort-header').forEach(h => {
+                    h.classList.remove('asc', 'desc');
+                });
+                header.classList.add(sortState[field]);
+                
+                renderDrillDownTable();
+            });
+        });
+        
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            initDashboard();
+        });
+    </script>
+</body>
+</html>
